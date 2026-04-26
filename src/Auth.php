@@ -6,10 +6,24 @@ use Auth\Session;
 
 class Auth
 {
-   //Свойство для хранения любого класса, реализующего интерфейс IdentityInterface
    private static IdentityInterface $user;
 
-   //Инициализация класса пользователя
+   private static array $apiTokens = [];
+
+public static function generateApiToken(IdentityInterface $user): string
+{
+    $token = bin2hex(random_bytes(16));
+    self::$apiTokens[$token] = $user->getId();
+    return $token;
+}
+
+public static function userFromToken(string $token): ?IdentityInterface
+{
+    $userId = self::$apiTokens[$token] ?? null;
+    if (!$userId) return null;
+    return self::$user->findIdentity($userId);
+}
+
    public static function init(IdentityInterface $user): void
    {
        self::$user = $user;
@@ -18,7 +32,6 @@ class Auth
        }
    }
 
-   //Вход пользователя по модели
    public static function login(IdentityInterface $user): void
    {
        self::$user = $user;
@@ -26,10 +39,8 @@ class Auth
        Session::set('id', self::$user->getId());
    }
 
-   //Аутентификация пользователя и вход по учетным данным
    public static function attempt(array $credentials): bool
    {
-        //print_r($credentials);
         
         if ($user = self::$user->attemptIdentity($credentials)) {
             self::login($user);
@@ -38,7 +49,6 @@ class Auth
         return false;
    }
 
-   //Возврат текущего аутентифицированного пользователя
    public static function user()
    {
        $id = Session::get('id') ?? 0;
@@ -46,7 +56,6 @@ class Auth
    }
 
 
-   //Проверка является ли текущий пользователь аутентифицированным
    public static function check(): bool
    {
        if (self::user()) {
